@@ -2,10 +2,9 @@ package org.sasanlabs.configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 import org.sasanlabs.internal.utility.LevelConstants;
@@ -46,9 +45,11 @@ public class VulnerableAppConfiguration {
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
-    private static final List<String> MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS =
-            Arrays.asList(
-                    "/" + UnrestrictedFileUpload.CONTROLLER_PATH + "/" + LevelConstants.LEVEL_9);
+    private static final Set<String> BOUNDED_FILE_UPLOAD_PATHS =
+            Set.of("/" + UnrestrictedFileUpload.CONTROLLER_PATH + "/" + LevelConstants.LEVEL_9);
+    private static final long MAX_FILE_UPLOAD_SIZE_BYTES = 2L * 1024L * 1024L;
+    private static final long MAX_MULTIPART_REQUEST_SIZE_BYTES =
+            MAX_FILE_UPLOAD_SIZE_BYTES + (64L * 1024L);
 
     /**
      * Will Inject MessageBundle into messageSource bean.
@@ -185,21 +186,20 @@ public class VulnerableAppConfiguration {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Customized MultipartFilter bean disables default max upload size for multipart files and
-     * their overall requests, for select paths. See {@link
-     * UnrestrictedFileUpload#getVulnerablePayloadLevel10()} for usage.
-     */
+    /** Applies parser-level limits to the upload route that previously opted out of all limits. */
     @Bean
     @Order(0)
     public MultipartFilter multipartFilter() {
         class MaxUploadSizeOverrideMultipartFilter extends MultipartFilter {
             @Override
             protected MultipartResolver lookupMultipartResolver(HttpServletRequest request) {
-                if (MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS.contains(request.getServletPath())) {
+                if (BOUNDED_FILE_UPLOAD_PATHS.contains(request.getServletPath())) {
                     CommonsMultipartResolver multipart = new CommonsMultipartResolver();
-                    multipart.setMaxUploadSize(-1);
-                    multipart.setMaxUploadSizePerFile(-1);
+                    // Enforce the bound while Commons FileUpload is parsing the request. A check
+                    // on MultipartFile#getSize in the controller is too late to prevent an
+                    // attacker from consuming disk/memory with an unbounded multipart body.
+                    multipart.setMaxUploadSize(MAX_MULTIPART_REQUEST_SIZE_BYTES);
+                    multipart.setMaxUploadSizePerFile(MAX_FILE_UPLOAD_SIZE_BYTES);
                     return multipart;
                 } else {
                     // returns default implementation
