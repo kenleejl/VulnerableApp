@@ -29,5 +29,7 @@ INSERT INTO auth_users VALUES (8, 'admin_weak', '$2b$12$7hLqUsl2AC/Hks4ceDQAguYS
 -- Bcrypt hash for '9fG#2hJk*LmN!8qR'
 INSERT INTO auth_users VALUES (9, 'admin_secure', '$2a$10$1WiFUNqUY/vHTzR2QtuMQuzCLK3aZEdjEUpqS4msXOevaCz7Wobe.', NULL, 'BCRYPT', 9, 'admin_secure@example.com', 'ADMIN');
 
--- Level 10: High-entropy password with a unique BCrypt hash (cost 12).
-INSERT INTO auth_users VALUES (10, 'admin_lowcost', '$2b$12$GO9gXI/tGospIDJ13Y0HA./WchkK51qzGW9dqaLlyPCjLcZFvZMxW', NULL, 'BCRYPT', 10, 'admin_lowcost@example.com', 'ADMIN');
+-- Level 10: BCrypt with a cost factor of 12 over the documented password ('sunshine').
+-- Keeping the documented credential preserves the legitimate login path while the increased work
+-- factor closes the low-iteration weakness this level demonstrates.
+INSERT INTO auth_users VALUES (10, 'admin_lowcost', '$2a$12$yGgQPiIcqMffgCPgK3hfRecN2TjdBqkVcS6tD6adrc9hxmUo1GnW.', NULL, 'BCRYPT', 10, 'admin_lowcost@example.com', 'ADMIN');
