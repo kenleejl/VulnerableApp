@@ -210,4 +210,25 @@ public class VulnerableAppConfiguration {
         ;
         return new MaxUploadSizeOverrideMultipartFilter();
     }
+
+    /**
+     * Sends clickjacking protection on every response, including static challenge pages, error
+     * pages, OPTIONS responses, and requests that never reach a controller method.
+     */
+    @Bean
+    @Order(1)
+    public javax.servlet.Filter framingProtectionFilter() {
+        return new org.springframework.web.filter.OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(
+                    HttpServletRequest request,
+                    javax.servlet.http.HttpServletResponse response,
+                    javax.servlet.FilterChain filterChain)
+                    throws javax.servlet.ServletException, IOException {
+                response.setHeader("X-Frame-Options", "DENY");
+                response.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+                filterChain.doFilter(request, response);
+            }
+        };
+    }
 }
